@@ -1,0 +1,20 @@
+[package]
+name = "bad_apple_frames"
+version = "0.1.0"
+authors = ["02NIN20 <lycoronelp@udistrital.edu.co>"]
+edition = "2021"
+resolver = "2"
+rust-version = "1.82"
+
+[[bin]]
+name = "bad_apple_frames"
+harness = false
+
+[dependencies]
+esp-idf-svc = "0.52"
+ssd1306 = "0.9"
+embedded-graphics = "0.8"
+anyhow = "1"
+
+[build-dependencies]
+embuild = "0.33"

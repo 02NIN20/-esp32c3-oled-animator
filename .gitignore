@@ -1,0 +1,8 @@
+target/
+.embuild/
+*.mp4
+*.mov
+*.avi
+*.mkv
+temp_frames/
+.vscode/
