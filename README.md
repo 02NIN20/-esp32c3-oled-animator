@@ -1,6 +1,6 @@
-# Bad Apple en OLED SSD1306 con ESP32-C3
+# ESP32-C3 OLED Animator
 
-Reproduce la animación de **Bad Apple** en un display OLED SSD1306 72×40 píxeles usando un ESP32-C3, a 20 FPS. Los frames se convierten desde un video y se compilan directamente en la flash del microcontrolador.
+Reproduce animaciones monocromáticas en un display OLED SSD1306 usando un ESP32-C3. Los frames se convierten desde cualquier video y se compilan directamente en la flash del microcontrolador.
 
 ## Requisitos
 
@@ -36,13 +36,13 @@ Reproduce la animación de **Bad Apple** en un display OLED SSD1306 72×40 píxe
 ## Estructura del proyecto
 
 ```
-bad_apple_esp/
+esp32c3-oled-animator/
 ├── firmware/                    # Crate del ESP32-C3
 │   ├── Cargo.toml
 │   ├── build.rs
 │   ├── src/
 │   │   ├── main.rs              # Loop de reproducción en el OLED
-│   │   └── anim_frames.rs       # 4383 frames (auto-generado)
+│   │   └── anim_frames.rs       # Frames de la animación (auto-generado)
 │   ├── .cargo/config.toml       # Target RISC-V + runner
 │   ├── rust-toolchain.toml      # nightly + rust-src
 │   └── sdkconfig.defaults       # Configuración ESP-IDF
@@ -67,19 +67,21 @@ bad_apple_esp/
 **Opción A: Conversor Rust**
 ```bash
 cd video_to_anim
-cargo run --release -- bad_apple.mp4 20
+cargo run --release -- video.mp4 20
 ```
 Esto genera `firmware/src/anim_frames.rs` con los frames en formato monocromo.
 
 **Opción B: Script Python**
 ```bash
-python generate_frames.py bad_apple.mp4 20
+python generate_frames.py video.mp4 20
 ```
 
 Parámetros:
-- Primer argumento: ruta al video `.mp4`
-- Segundo argumento (opcional): FPS (por defecto 30)
+- Primer argumento: ruta al video
+- Segundo argumento (opcional): FPS (por defecto 30, recomendado 20)
 - Tercer argumento (opcional, solo en Python): máximo de frames
+
+El conversor aplica **dithering Floyd-Steinberg** para mejorar la calidad visual al cuantizar a blanco y negro.
 
 ### 2. Preview en PC (opcional)
 
@@ -114,7 +116,7 @@ touch firmware/target/riscv32imc-esp-espidf/{debug,release}/.fingerprint/esp-idf
 cargo build --release
 ```
 
-Los bindings correctos están en `prebuilt/bindings.rs` (generados con `esp-idf-sys` commit `9d49cb5`).
+Los bindings correctos están en `prebuilt/bindings.rs`.
 
 ## Personalizar resolución
 
@@ -126,21 +128,29 @@ const HEIGHT: u32 = 64;   // alto en píxeles
 
 Y en `firmware/src/main.rs` cambia `DisplaySize72x40` por el tamaño correspondiente (ej. `DisplaySize128x64`).
 
+También aplica para el preview en `video_to_anim/view_anim/src/main.rs`.
+
 ## Cómo funciona
 
 ### video_to_anim
 
 1. **ffmpeg** extrae cada frame del video como grises a la resolución objetivo
 2. **Floyd-Steinberg dithering** mejora la calidad visual al cuantizar a 1 bit
-3. Cada frame se empaqueta en 360 bytes (72×40÷8) en formato monocromo horizontal
+3. Cada frame se empaqueta en `WIDTH × HEIGHT / 8` bytes en formato monocromo horizontal
 4. Se genera `anim_frames.rs` con todos los frames como un `static` array
 
 ### Firmware (ESP32-C3)
 
-1. Inicializa el periférico I2C en GPIO5/GPIO6 a 400KHz
-2. Configura el OLED SSD1306 en modo 72×40 con buffer gráfico
+1. Inicializa el periférico I2C a 400KHz
+2. Configura el OLED SSD1306 en modo gráfico con buffer
 3. Reproduce en loop infinito: por cada frame, lo dibuja con `embedded-graphics` y lo envía al display
-4. Espera 50ms entre frames (20 FPS)
+4. Espera `1000/FPS` ms entre frames
+
+## Limitaciones
+
+- Solo blanco y negro (1 bit por píxel)
+- Los frames se almacenan en la flash del microcontrolador, no hay decodificación en tiempo real
+- El tamaño máximo de animación depende de la flash disponible (4MB en ESP32-C3)
 
 ## Licencia
 
